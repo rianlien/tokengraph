@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Token Graph PoC (UX-First Edition)</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Inter Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- vis.js CDN for Network Graph -->
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.css" rel="stylesheet" type="text/css" />
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="bg-gray-100 text-gray-800">
+    <div class="container py-8">
+        <h1 class="text-4xl font-bold text-center text-blue-700 mb-8">Token Graph PoC (UX-First Edition)</h1>
+        <p class="text-center text-gray-600 mb-8">プロジェクトを登録し、リストから選択してグラフを表示します。</p>
+
+        <!-- Main Page Content -->
+        <div id="mainPageContent">
+            <!-- Project Input Section -->
+            <div class="bg-white p-8 rounded-xl shadow-lg mb-8">
+                <h2 class="text-2xl font-semibold text-gray-700 mb-6">プロジェクト情報入力</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                    <div class="md:col-span-1">
+                        <label for="projectName" class="block text-sm font-medium text-gray-600 mb-1">プロジェクト名</label>
+                        <input type="text" id="projectName" class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm" placeholder="例: My Awesome DApp">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-600 mb-1">コントラクトアドレス</label>
+                        <div id="contractAddressesContainer">
+                            <!-- Dynamic contract address inputs will be added here -->
+                            <div class="contract-input-group">
+                                <input type="text" class="contract-address-input mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm" placeholder="例: 0xAbC...123">
+                                <button type="button" class="remove-contract-btn bg-red-400 hover:bg-red-500 text-white p-2 rounded-md transition duration-300 hidden">X</button>
+                            </div>
+                        </div>
+                        <button type="button" id="addContractAddressBtn" class="mt-2 bg-gray-200 hover:bg-gray-300 text-gray-700 text-sm py-1 px-3 rounded-md transition duration-300">
+                            + コントラクトアドレスを追加
+                        </button>
+                    </div>
+                    <div class="md:col-span-1">
+                        <label for="walletAddress" class="block text-sm font-medium text-gray-600 mb-1">運用ウォレットアドレス</label>
+                        <input type="text" id="walletAddress" class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm" placeholder="例: 0xDeF...456">
+                    </div>
+                </div>
+                <div class="flex flex-col sm:flex-row gap-4">
+                    <button id="saveProjectBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105">
+                        プロジェクトを保存
+                    </button>
+                </div>
+                <div id="projectInfoDisplay" class="mt-6 p-4 bg-blue-50 border border-blue-200 text-blue-800 rounded-md hidden">
+                    <p class="font-semibold">現在選択中のプロジェクト:</p>
+                    <p><strong>プロジェクト名:</strong> <span id="displayProjectName"></span></p>
+                    <p><strong>コントラクトアドレス:</strong> <span id="displayContractAddress"></span></p>
+                    <p><strong>運用ウォレットアドレス:</strong> <span id="displayWalletAddress"></span></p>
+                </div>
+            </div>
+
+            <!-- Registered Projects List Section -->
+            <div class="bg-white p-8 rounded-xl shadow-lg mb-8">
+                <h2 class="text-2xl font-semibold text-gray-700 mb-6">登録済みプロジェクト</h2>
+                <div id="registeredProjectsList" class="min-h-[100px] border border-dashed border-gray-300 rounded-md p-4 flex flex-col justify-center items-center text-gray-500">
+                    <p>まだプロジェクトが登録されていません。</p>
+                </div>
+                <div class="mt-6">
+                    <button id="showAllProjectsGraphBtn" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105">
+                        全プロジェクトのグラフ表示
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Graph Page Content (Initially hidden) -->
+        <div id="graphPageContent" class="hidden">
+            <div class="flex justify-between items-center mb-6">
+                <button id="backButton" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105">
+                    ← プロジェクト一覧に戻る
+                </button>
+                <div id="currentProjectDisplay" class="bg-blue-50 border border-blue-200 text-blue-800 rounded-md p-3 text-sm">
+                    <p class="font-semibold">表示中のプロジェクト: <span id="displayGraphProjectName"></span></p>
+                </div>
+            </div>
+
+            <!-- Graph Display Section -->
+            <div class="bg-white p-8 rounded-xl shadow-lg">
+                <h2 class="text-2xl font-semibold text-gray-700 mb-6">トークングラフ</h2>
+                <!-- Individual Project Selection when 'All Projects' is displayed -->
+                <div id="individualProjectSelection" class="mb-6 p-4 bg-gray-50 border border-gray-200 rounded-md hidden">
+                    <p class="font-semibold text-gray-700 mb-3">個別のプロジェクトグラフに切り替える:</p>
+                    <div id="graphProjectList" class="max-h-48 overflow-y-auto">
+                        <!-- Project list for graph page will be rendered here -->
+                    </div>
+                </div>
+                <div id="network"></div>
+                <div id="nodeTooltip" class="tooltip"></div>
+            </div>
+        </div>
+
+        <div id="messageBox" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
+            <div class="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full text-center">
+                <p id="messageText" class="text-lg font-medium text-gray-800 mb-4"></p>
+                <button id="messageBoxCloseBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md transition duration-300">閉じる</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom JavaScript -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>
